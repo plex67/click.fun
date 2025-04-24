@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Green Screen Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #score {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+
+    #game-container {
+      width: 100%;
+      height: 100vh;
+      background-color: red;  /* Starting background color */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 40px;
+      cursor: pointer;
+    }
+
+    #result {
+      font-size: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Green Screen Game 🟩</h1>
+  <div id="score">Score: 0</div>
+  <div id="game-container">
+    <div id="result">Wait for green...</div>
+  </div>
+
+  <script>
+    let score = 0;
+    let startTime = 0;
+    let gameStarted = false;
+    const gameContainer = document.getElementById("game-container");
+    const resultDiv = document.getElementById("result");
+    const scoreDisplay = document.getElementById("score");
+
+    // Randomly change the screen to green after a random time between 2 and 5 seconds
+    function startGame() {
+      gameStarted = true;
+      resultDiv.textContent = "Wait for green...";
+      gameContainer.style.backgroundColor = "red";
+
+      const waitTime = Math.floor(Math.random() * (5000 - 2000) + 2000);  // Random time between 2s and 5s
+
+      setTimeout(() => {
+        if (gameStarted) {
+          gameContainer.style.backgroundColor = "green"; // Turn screen green
+          startTime = Date.now(); // Start the timer
+          resultDiv.textContent = "Click!";
+        }
+      }, waitTime);
+    }
+
+    // Handle click event
+    gameContainer.addEventListener("click", () => {
+      if (gameContainer.style.backgroundColor === "green") {
+        const timeTaken = Date.now() - startTime; // Calculate milliseconds taken to click
+        score++;
+        scoreDisplay.textContent = `Score: ${score}`;
+        resultDiv.textContent = `You clicked in ${timeTaken} ms!`;
+
+        setTimeout(() => {
+          startGame(); // Start the game again after a short delay
+        }, 1000); // Delay before starting the next round
+      }
+    });
+
+    // Start the first game
+    startGame();
+  </script>
+</body>
+</html>

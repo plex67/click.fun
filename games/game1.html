@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shooter Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f7f7f7;
+    }
+
+    h1 {
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #score {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 20px;
+    }
+
+    canvas {
+      background-color: #fff;
+      border: 2px solid #333;
+      display: block;
+      margin: 30px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Shooter Game 🎯</h1>
+  <p>Click to shoot at the bullseye! The closer you are to the center, the higher your score!</p>
+  <div id="score">Score: 0</div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 600;
+    canvas.height = 400;
+
+    let score = 0;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 50; // Radius of the bullseye
+    const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+
+    // Draw bullseye
+    function drawBullseye() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius / 2, 0, Math.PI * 2);
+      ctx.fillStyle = "white";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    // Calculate score based on click distance from the center
+    function calculateScore(x, y) {
+      const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+      const score = Math.max(0, Math.floor(100 - (distance / maxDistance) * 100));
+      return score;
+    }
+
+    // Update score and display it
+    function updateScore(x, y) {
+      score = calculateScore(x, y);
+      document.getElementById("score").textContent = `Score: ${score}`;
+    }
+
+    // Shoot when the user clicks
+    canvas.addEventListener("click", (e) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
+      updateScore(x, y);
+      drawBullseye();
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = "blue";
+      ctx.fill();
+      ctx.closePath();
+    });
+
+    // Draw the initial bullseye
+    drawBullseye();
+  </script>
+</body>
+</html>

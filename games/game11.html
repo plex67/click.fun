@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Typing Warrior</title>
+  <style>
+    body { margin: 0; background: #111; color: #eee; font-family: sans-serif; overflow: hidden; }
+    #gameCanvas { display: block; margin: auto; background: #222; border: 2px solid #555; }
+    #ui { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center; }
+    #ui div { margin: 5px; font-size: 18px; }
+    #inputBox { width: 300px; padding: 8px; font-size: 18px; border-radius: 4px; border: 1px solid #555; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <div id="ui">
+    <div>Wave: <span id="wave">1</span> | Score: <span id="score">0</span> | Streak: <span id="streak">0</span></div>
+    <input type="text" id="inputBox" placeholder="Type word and press Enter" autocomplete="off" />
+    <div id="message"></div>
+  </div>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const inputBox = document.getElementById('inputBox');
+    const waveDisplay = document.getElementById('wave');
+    const scoreDisplay = document.getElementById('score');
+    const streakDisplay = document.getElementById('streak');
+    const messageDiv = document.getElementById('message');
+
+    const WORDS = ['apple','banana','cherry','dragon','eagle','forest','guitar','harbor','island','jungle','king','lemon','mountain','night','ocean','piano','queen','rocket','sunset','tiger','umbrella','violet','whiskey','xylophone','yacht','zephyr'];
+
+    let enemies = [];
+    let effects = [];
+    let wave = 1;
+    let score = 0;
+    let streak = 0;
+    let enemySpeed = 1;
+    let spawning = true;
+
+    function spawnWave() {
+      enemies = [];
+      effects = [];
+      spawning = true;
+      let count = 5 + wave * 2;
+      for (let i = 0; i < count; i++) {
+        let word = WORDS[Math.floor(Math.random() * WORDS.length)];
+        word = word + (wave>3 ? String(Math.floor(Math.random()*10)) : '');
+        enemies.push({
+          word,
+          x: Math.random() * (canvas.width - 80) + 40,
+          y: -Math.random() * 200,
+          speed: enemySpeed + wave * 0.1,
+        });
+      }
+      waveDisplay.textContent = wave;
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // draw enemies
+      ctx.fillStyle = '#eee';
+      ctx.textAlign = 'center';
+      ctx.font = '20px sans-serif';
+      enemies.forEach(e => {
+        ctx.fillText(e.word, e.x, e.y);
+        e.y += e.speed;
+      });
+      // draw effects
+      effects.forEach((eff, i) => {
+        ctx.globalAlpha = eff.alpha;
+        ctx.fillStyle = 'red';
+        ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+        eff.radius += 1;
+        eff.alpha -= 0.02;
+        if (eff.alpha <= 0) effects.splice(i,1);
+      });
+    }
+
+    function update() {
+      // check for game over
+      for (let e of enemies) {
+        if (e.y > canvas.height - 20) {
+          endGame(); return;
+        }
+      }
+      if (enemies.length === 0 && spawning) {
+        spawning = false;
+        wave++;
+        enemySpeed += 0.2;
+        setTimeout(spawnWave, 1000);
+      }
+      draw();
+      if (spawning) requestAnimationFrame(update);
+    }
+
+    function endGame() {
+      messageDiv.innerHTML = `<span style=\"color:red;font-size:24px;\">Game Over!</span> Final Score: ${score}`;
+      spawning = false;
+      inputBox.disabled = true;
+    }
+
+    inputBox.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        let val = inputBox.value.trim();
+        let idx = enemies.findIndex(en => en.word === val);
+        if (idx !== -1) {
+          let en = enemies[idx];
+          // hit effect
+          effects.push({ x: en.x, y: en.y, radius: 10, alpha: 1 });
+          enemies.splice(idx,1);
+          score += 10 * (1 + Math.floor(streak/5));
+          streak++;
+          messageDiv.textContent = 'Hit!';
+        } else {
+          streak = 0;
+          messageDiv.textContent = 'Miss!';
+        }
+        scoreDisplay.textContent = score;
+        streakDisplay.textContent = streak;
+        inputBox.value = '';
+      }
+    });
+
+    // start
+    spawnWave();
+    update();
+    inputBox.focus();
+  </script>
+</body>
+</html>

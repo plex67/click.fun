@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Adventure Game</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    canvas {
+      margin-top: 20px;
+      border: 4px solid white;
+      background-color: black;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-size: 18px;
+      color: #fffbcc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Maze Adventure 🧭</h1>
+  <p>Use arrow keys. Answer riddles to pass monsters. Reach the gold exit!</p>
+  <canvas id="mazeCanvas" width="600" height="600"></canvas>
+  <div id="message"></div>
+
+  <script>
+    const canvas = document.getElementById("mazeCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const rows = 21;
+    const cols = 21;
+    const cellSize = canvas.width / cols;
+
+    let maze = [];
+    let monsters = [];
+    const player = { x: 1, y: 1 };
+    const exit = { x: cols - 2, y: rows - 2 };
+
+    const riddles = [
+      { q: "What has to be broken before you can use it?", a: "egg" },
+      { q: "I’m tall when I’m young, and short when I’m old. What am I?", a: "candle" },
+      { q: "What goes up but never comes down?", a: "age" },
+      { q: "What gets wetter the more it dries?", a: "towel" },
+      { q: "I speak without a mouth and hear without ears. What am I?", a: "echo" },
+      { q: "The more of me you take, the more you leave behind. What am I?", a: "footsteps" },
+      { q: "I have keys but no locks. I have a space but no room. What am I?", a: "keyboard" },
+      { q: "What runs but never walks, has a bed but never sleeps?", a: "river" },
+      { q: "What can travel around the world while staying in the same corner?", a: "stamp" },
+      { q: "What begins with T, ends with T, and has T in it?", a: "teapot" },
+      { q: "I’m light as a feather, but even the world’s strongest man can’t hold me for long. What am I?", a: "breath" }
+    ];
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function generateMaze() {
+      maze = Array(rows).fill().map(() => Array(cols).fill(1));
+
+      function carve(x, y) {
+        maze[y][x] = 0;
+        const dirs = shuffle([[0, -2], [2, 0], [0, 2], [-2, 0]]);
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx > 0 && ny > 0 && nx < cols && ny < rows && maze[ny][nx] === 1) {
+            maze[y + dy / 2][x + dx / 2] = 0;
+            carve(nx, ny);
+          }
+        }
+      }
+
+      carve(1, 1);
+
+      monsters = [];
+      while (monsters.length < 5) {
+        const x = Math.floor(Math.random() * (cols - 2)) + 1;
+        const y = Math.floor(Math.random() * (rows - 2)) + 1;
+        if (maze[y][x] === 0 && !(x === player.x && y === player.y) && !(x === exit.x && y === exit.y)) {
+          monsters.push({ x, y, defeated: false });
+        }
+      }
+    }
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (maze[y][x] === 1) {
+            ctx.fillStyle = "#444";
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      // Draw monsters
+      monsters.forEach(m => {
+        if (!m.defeated) {
+          ctx.fillStyle = "purple";
+          ctx.fillRect(m.x * cellSize + 6, m.y * cellSize + 6, cellSize - 12, cellSize - 12);
+        }
+      });
+
+      // Draw player
+      ctx.fillStyle = "lime";
+      ctx.fillRect(player.x * cellSize + 4, player.y * cellSize + 4, cellSize - 8, cellSize - 8);
+
+      // Draw exit
+      ctx.fillStyle = "gold";
+      ctx.fillRect(exit.x * cellSize + 8, exit.y * cellSize + 8, cellSize - 16, cellSize - 16);
+    }
+
+    function showMessage(text) {
+      document.getElementById("message").textContent = text;
+    }
+
+    function checkMonster() {
+      const monster = monsters.find(m => m.x === player.x && m.y === player.y && !m.defeated);
+      if (monster) {
+        const riddle = riddles[Math.floor(Math.random() * riddles.length)];
+        const answer = prompt("🧟 Monster asks: " + riddle.q).toLowerCase().trim();
+        if (answer === riddle.a) {
+          monster.defeated = true;
+          showMessage("✅ Correct! Monster defeated.");
+        } else {
+          showMessage("❌ Wrong! Try another path.");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function move(dx, dy) {
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+      if (maze[ny][nx] === 0) {
+        const prevX = player.x, prevY = player.y;
+        player.x = nx;
+        player.y = ny;
+        if (!checkMonster()) {
+          player.x = prevX;
+          player.y = prevY;
+        }
+        if (player.x === exit.x && player.y === exit.y) {
+          showMessage("🎉 You escaped the maze!");
+        }
+        drawMaze();
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      switch (e.key) {
+        case "ArrowUp": move(0, -1); break;
+        case "ArrowDown": move(0, 1); break;
+        case "ArrowLeft": move(-1, 0); break;
+        case "ArrowRight": move(1, 0); break;
+      }
+    });
+
+    generateMaze();
+    drawMaze();
+  </script>
+</body>
+</html>

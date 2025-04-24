@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Penalty Kick Challenge ⚽</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #a8d5e2;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px 20px;
+      font-size: 20px;
+      border-radius: 10px;
+    }
+
+    #redoBtn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #f44336;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+    }
+
+    #message {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      color: white;
+      font-weight: bold;
+      display: none;
+    }
+
+    .crowd {
+      position: absolute;
+      top: 50%;
+      width: 50px;
+      height: 50px;
+      background: yellow;
+      border-radius: 50%;
+      animation: crowdCheer 1s ease-in-out infinite;
+    }
+
+    .crowd-left {
+      left: 10px;
+    }
+
+    .crowd-right {
+      right: 10px;
+    }
+
+    @keyframes crowdCheer {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.5); }
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <button id="redoBtn">🔁 Try Again</button>
+  <div id="message"></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const redoBtn = document.getElementById('redoBtn');
+    const messageDisplay = document.getElementById('message');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let ball, goalie, dragging = false, score = 0, gameOver = false;
+
+    const messages = ["MMMMMBAPPE", "SUIIIIIIII", "GOAL!", "TOP CORNER"];
+
+    function resetGame() {
+      ball = {
+        x: canvas.width / 2,
+        y: canvas.height - 100,
+        radius: 20,
+        vx: 0,
+        vy: 0,
+        isMoving: false
+      };
+
+      // Goal size is now 80% of the canvas width, allowing goalie to move more
+      const goalWidth = canvas.width * 0.8;
+      goalie = {
+        x: canvas.width / 2 - goalWidth / 2, // Start at the center of the goal
+        y: 100,
+        width: goalWidth / 3, // Goalkeeper's width (1/3 of the goal width)
+        height: 30,
+        direction: 1,
+        speed: 16 // Increased speed for faster movement (2x faster than before)
+      };
+
+      score = 0;
+      gameOver = false;
+      updateScore();
+      redoBtn.style.display = "none";
+      messageDisplay.style.display = "none";
+      document.querySelectorAll(".crowd").forEach(c => c.remove());
+    }
+
+    function updateScore() {
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    function drawField() {
+      ctx.fillStyle = '#4CAF50';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.lineWidth = 10;
+
+      // Goal line width 80% of canvas width
+      const goalLineWidth = canvas.width * 0.8;
+      const goalLineStartX = (canvas.width - goalLineWidth) / 2;
+      ctx.beginPath();
+      ctx.moveTo(goalLineStartX, 80);
+      ctx.lineTo(goalLineStartX + goalLineWidth, 80);
+      ctx.stroke();
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+      ctx.strokeStyle = 'black';
+      ctx.stroke();
+    }
+
+    function drawGoalie() {
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(goalie.x, goalie.y, goalie.width, goalie.height);
+    }
+
+    function showMessage(message) {
+      messageDisplay.textContent = message;
+      messageDisplay.style.display = "block";
+      setTimeout(() => {
+        messageDisplay.style.display = "none";
+      }, 1500);
+    }
+
+    function drawCrowd() {
+      if (score > 0) {
+        const leftCrowd = document.createElement('div');
+        leftCrowd.classList.add('crowd', 'crowd-left');
+        document.body.appendChild(leftCrowd);
+
+        const rightCrowd = document.createElement('div');
+        rightCrowd.classList.add('crowd', 'crowd-right');
+        document.body.appendChild(rightCrowd);
+      }
+    }
+
+    function update() {
+      if (!gameOver && ball.isMoving) {
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        // Goalkeeper movement speed increased
+        goalie.x += goalie.speed * goalie.direction;
+        if (goalie.x <= canvas.width / 2 - (canvas.width * 0.8) / 2 || goalie.x + goalie.width >= canvas.width / 2 + (canvas.width * 0.8) / 2) {
+          goalie.direction *= -1;
+        }
+
+        if (ball.y <= 90) {
+          ball.isMoving = false;
+
+          const goalLineWidth = canvas.width * 0.8;
+          const goalLineStartX = (canvas.width - goalLineWidth) / 2;
+          const inGoal = ball.x >= goalLineStartX && ball.x <= goalLineStartX + goalLineWidth;
+          const hitGoalie = ball.x > goalie.x && ball.x < goalie.x + goalie.width;
+
+          if (inGoal && !hitGoalie) {
+            score += 50;
+            updateScore();
+            showMessage(messages[Math.floor(Math.random() * messages.length)]);
+            drawCrowd();
+            setTimeout(() => {
+              ball.x = canvas.width / 2;
+              ball.y = canvas.height - 100;
+              ball.vx = 0;
+              ball.vy = 0;
+              ball.isMoving = false;
+            }, 1000);
+          } else {
+            gameOver = true;
+            redoBtn.style.display = "inline-block";
+            showMessage("Game Over! Missed!");
+          }
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawField();
+      drawGoalie();
+      drawBall();
+
+      if (dragging) {
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.lineTo(dragX, dragY);
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    let dragX = 0, dragY = 0;
+
+    canvas.addEventListener("mousedown", (e) => {
+      if (!ball.isMoving && !gameOver) {
+        const dx = e.offsetX - ball.x;
+        const dy = e.offsetY - ball.y;
+        if (Math.sqrt(dx * dx + dy * dy) < ball.radius + 10) {
+          dragging = true;
+        }
+      }
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (dragging) {
+        dragX = e.offsetX;
+        dragY = e.offsetY;
+      }
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+      if (dragging) {
+        dragging = false;
+        const power = 0.2;
+        ball.vx = (ball.x - dragX) * power;
+        ball.vy = (ball.y - dragY) * power;
+        ball.isMoving = true;
+      }
+    });
+
+    redoBtn.addEventListener("click", () => {
+      resetGame();
+    });
+
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>

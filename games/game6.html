@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penguin Push</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #a3c9d6;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px 20px;
+      font-size: 20px;
+      border-radius: 10px;
+    }
+
+    #redoBtn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #f44336;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+    }
+
+    #message {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      color: white;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <button id="redoBtn">🔁 Try Again</button>
+  <div id="message"></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const redoBtn = document.getElementById('redoBtn');
+    const messageDisplay = document.getElementById('message');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player, penguins, score = 0, gameOver = false;
+
+    function resetGame() {
+      player = {
+        x: canvas.width / 2,
+        y: canvas.height - 50,
+        width: 50,
+        height: 50,
+        speedX: 0,
+        speedY: 0,
+        speed: 5
+      };
+
+      penguins = [];
+      score = 0;
+      gameOver = false;
+      updateScore();
+      redoBtn.style.display = "none";
+      messageDisplay.style.display = "none";
+      createPenguin(); // Start spawning penguins
+    }
+
+    function updateScore() {
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function createPenguin() {
+      const penguinSize = 40;
+      const penguinSpeed = 2;
+      const xPos1 = Math.random() * (canvas.width - penguinSize);
+      const xPos2 = Math.random() * (canvas.width - penguinSize);
+
+      penguins.push({
+        x: xPos1,
+        y: 0,
+        width: penguinSize,
+        height: penguinSize,
+        speed: penguinSpeed + Math.random() * 2 // Random speed for each penguin
+      });
+      
+      penguins.push({
+        x: xPos2,
+        y: 0,
+        width: penguinSize,
+        height: penguinSize,
+        speed: penguinSpeed + Math.random() * 2 // Random speed for each penguin
+      });
+
+      score += 10;
+      updateScore();
+    }
+
+    function drawPenguins() {
+      penguins.forEach(penguin => {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(penguin.x, penguin.y, penguin.width, penguin.height);
+      });
+    }
+
+    function movePenguins() {
+      penguins.forEach(penguin => {
+        penguin.y += penguin.speed;
+        if (penguin.y > canvas.height) {
+          penguin.y = -40;
+          penguin.x = Math.random() * (canvas.width - penguin.width);
+        }
+      });
+    }
+
+    function handleCollisions() {
+      penguins.forEach(penguin => {
+        if (
+          player.x < penguin.x + penguin.width &&
+          player.x + player.width > penguin.x &&
+          player.y < penguin.y + penguin.height &&
+          player.y + player.height > penguin.y
+        ) {
+          gameOver = true;
+          messageDisplay.textContent = "Game Over!";
+          messageDisplay.style.display = "block";
+          redoBtn.style.display = "inline-block";
+        }
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the icy platform
+      ctx.fillStyle = '#00BFFF';
+      ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+
+      drawPlayer();
+      drawPenguins();
+      movePenguins();
+      handleCollisions();
+    }
+
+    function update() {
+      if (!gameOver) {
+        player.x += player.speedX;
+        player.y += player.speedY;
+
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+        if (player.y < canvas.height - 50) {
+          player.y += player.speedY; // Sliding effect
+        } else {
+          player.y = canvas.height - 50; // Stop sliding when reaching the platform
+        }
+      }
+      draw();
+    }
+
+    function gameLoop() {
+      update();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Controls
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        player.speedX = -player.speed;
+      } else if (e.key === "ArrowRight") {
+        player.speedX = player.speed;
+      } else if (e.key === "ArrowUp") {
+        player.speedY = -player.speed;
+      } else if (e.key === "ArrowDown") {
+        player.speedY = player.speed;
+      }
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        player.speedX = 0;
+      }
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        player.speedY = 0;
+      }
+    });
+
+    redoBtn.addEventListener("click", () => {
+      resetGame();
+    });
+
+    resetGame();
+    setInterval(createPenguin, 1000); // Spawn 2 penguins every second
+    gameLoop();
+  </script>
+</body>
+</html>

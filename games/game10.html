@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Time Jumper</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #222; overflow: hidden; font-family: sans-serif; color: white; }
+    canvas { display: block; margin: auto; background: #333; border: 2px solid white; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 16px;
+    }
+    #gameover {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 24px;
+      text-align: center;
+      display: none;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui">
+    Score: <span id="score">0</span> | Power-Up: <span id="power">None</span><br>
+    High Score: <span id="highscore">0</span> | Skin: <span id="skin">White</span>
+  </div>
+  <div id="gameover">
+    <p id="gameoverText"></p>
+    <button onclick="restartGame()">Try Again</button>
+    <br><br>
+    <button onclick="cycleSkin()">Change Skin</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 500;
+    canvas.height = 600;
+
+    let player = { x: 230, y: 500, width: 40, height: 40, vy: 0, jumping: false };
+    let skins = ["white", "red", "blue", "yellow", "green"];
+    let currentSkin = 0;
+    let platforms = [];
+    let score = 0;
+    let highscore = localStorage.getItem("highscore") || 0;
+    let powerUp = "None";
+    let gravity = 0.5;
+    let jumpPower = -10;
+    let gameSpeed = 2;
+    let keys = {};
+    let gameRunning = true;
+
+    document.getElementById("highscore").textContent = highscore;
+    document.getElementById("skin").textContent = skins[currentSkin].charAt(0).toUpperCase() + skins[currentSkin].slice(1);
+
+    function cycleSkin() {
+      currentSkin = (currentSkin + 1) % skins.length;
+      document.getElementById("skin").textContent = skins[currentSkin].charAt(0).toUpperCase() + skins[currentSkin].slice(1);
+    }
+
+    function createPlatform() {
+      const width = 100 + Math.random() * 100;
+      const x = Math.random() * (canvas.width - width);
+      platforms.push({ x, y: canvas.height, width, height: 10, timer: 300 });
+    }
+    setInterval(() => { if (gameRunning) createPlatform(); }, 1500);
+
+    window.addEventListener("keydown", e => keys[e.key] = true);
+    window.addEventListener("keyup", e => keys[e.key] = false);
+
+    function applyPowerUp(type) {
+      powerUp = type;
+      document.getElementById("power").textContent = type;
+      if (type === "Double Jump") jumpPower = -15;
+      if (type === "Slow Time") gameSpeed = 1;
+      if (type === "Platform Freeze") gravity = 0.2;
+      setTimeout(() => {
+        powerUp = "None";
+        document.getElementById("power").textContent = "None";
+        jumpPower = -10;
+        gameSpeed = 2;
+        gravity = 0.5;
+      }, 5000);
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (keys["ArrowLeft"]) player.x -= 5;
+      if (keys["ArrowRight"]) player.x += 5;
+      if (keys[" "] && !player.jumping) {
+        player.vy = jumpPower;
+        player.jumping = true;
+      }
+
+      player.vy += gravity;
+      player.y += player.vy;
+
+      if (player.y > canvas.height) {
+        endGame();
+        return;
+      }
+
+      for (let i = platforms.length - 1; i >= 0; i--) {
+        let p = platforms[i];
+        p.y -= gameSpeed;
+        p.timer--;
+        if (p.timer <= 0) {
+          platforms.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = "lime";
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+
+        if (
+          player.vy >= 0 &&
+          player.y + player.height < p.y + 10 &&
+          player.y + player.height > p.y &&
+          player.x + player.width > p.x &&
+          player.x < p.x + p.width
+        ) {
+          player.y = p.y - player.height;
+          player.vy = 0;
+          player.jumping = false;
+          score++;
+          document.getElementById("score").textContent = score;
+
+          if (score % 10 === 0) {
+            const types = ["Double Jump", "Slow Time", "Platform Freeze"];
+            const type = types[Math.floor(Math.random() * types.length)];
+            applyPowerUp(type);
+          }
+        }
+      }
+
+      ctx.fillStyle = skins[currentSkin];
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      gameRunning = false;
+      document.getElementById("gameover").style.display = "block";
+      document.getElementById("gameoverText").textContent = `Game Over! Final Score: ${score}`;
+      if (score > highscore) {
+        highscore = score;
+        localStorage.setItem("highscore", highscore);
+        document.getElementById("highscore").textContent = highscore;
+      }
+    }
+
+    function restartGame() {
+      player.x = 230;
+      player.y = 500;
+      player.vy = 0;
+      player.jumping = false;
+      score = 0;
+      document.getElementById("score").textContent = 0;
+      platforms = [];
+      document.getElementById("gameover").style.display = "none";
+      gameRunning = true;
+      createPlatform();
+      gameLoop();
+    }
+
+    createPlatform();
+    gameLoop();
+  </script>
+</body>
+</html>

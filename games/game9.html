@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fishing Adventure</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; margin: auto; background: #87ceeb; transition: background 1s ease; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: Arial;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    #shop {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: Arial;
+    }
+    button {
+      margin-top: 5px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div id="ui">
+  <div>XP: <span id="xp">0</span> | Level: <span id="level">1</span></div>
+  <div>Score: <span id="score">0</span></div>
+  <div>Quests: Catch <span id="questFish">5</span> fish</div>
+</div>
+<div id="shop">
+  <button onclick="upgradeRod()">Upgrade Rod (100 pts)</button>
+  <button onclick="upgradeBait()">Upgrade Bait (100 pts)</button>
+</div>
+<canvas id="game"></canvas>
+<audio src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_5e33623e93.mp3?filename=calm-water-ambient-11294.mp3" autoplay loop></audio>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = 500;
+canvas.height = 600;
+
+let hook = { x: 240, y: 0, width: 20, height: 60, speed: 3, isDown: false };
+let fish = [];
+let score = 0, xp = 0, level = 1, rodLevel = 1, baitLevel = 1;
+let questFishGoal = 5;
+let questFishCaught = 0;
+let backgrounds = ["#87ceeb", "#1e90ff", "#2f4f4f", "#00008b"];
+
+function spawnFish() {
+  const y = 400 + Math.random() * 180;
+  const speed = 2 + Math.random() * 3;
+  const direction = Math.random() < 0.5 ? 1 : -1;
+  const x = direction === 1 ? -60 : canvas.width + 60;
+  const rand = Math.random();
+  let type = "normal", color = "orange", value = 50;
+  if (rand < 0.1) { type = "rare"; color = "gold"; value = 150; }
+  if (rand < 0.02) { type = "boss"; color = "purple"; value = 500; }
+  fish.push({ x, y, width: 60, height: 30, color, speed, dir: direction, value });
+}
+setInterval(spawnFish, 1500);
+
+window.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown") hook.isDown = true;
+  if (e.key === "ArrowUp") hook.isDown = false;
+});
+
+function drawRect(obj) {
+  ctx.fillStyle = obj.color;
+  ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+}
+
+function upgradeRod() {
+  if (score >= 100) {
+    rodLevel++;
+    score -= 100;
+    hook.speed += 1;
+    updateUI();
+  }
+}
+
+function upgradeBait() {
+  if (score >= 100) {
+    baitLevel++;
+    score -= 100;
+    updateUI();
+  }
+}
+
+function levelUp() {
+  const requiredXP = level * 200;
+  if (xp >= requiredXP) {
+    level++;
+    xp -= requiredXP;
+    document.body.style.background = backgrounds[level - 1] || "#000";
+  }
+}
+
+function updateUI() {
+  document.getElementById("score").textContent = score;
+  document.getElementById("xp").textContent = xp;
+  document.getElementById("level").textContent = level;
+  document.getElementById("questFish").textContent = questFishGoal - questFishCaught;
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2, 0);
+  ctx.lineTo(canvas.width / 2, hook.y);
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  if (hook.isDown && hook.y < canvas.height - 60) hook.y += hook.speed;
+  else if (!hook.isDown && hook.y > 0) hook.y -= hook.speed;
+
+  drawRect(hook);
+
+  for (let i = 0; i < fish.length; i++) {
+    fish[i].x += fish[i].speed * fish[i].dir;
+    drawRect(fish[i]);
+
+    if (
+      hook.y + hook.height > fish[i].y &&
+      hook.y < fish[i].y + fish[i].height &&
+      hook.x < fish[i].x + fish[i].width &&
+      hook.x + hook.width > fish[i].x
+    ) {
+      score += fish[i].value;
+      xp += 50 * baitLevel;
+      questFishCaught++;
+      if (questFishCaught >= questFishGoal) {
+        questFishGoal += 5;
+        questFishCaught = 0;
+        score += 200; // reward
+        alert("🎉 Quest Completed! +200 Bonus Points!");
+      }
+      fish.splice(i, 1);
+      i--;
+    }
+  }
+
+  updateUI();
+  levelUp();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Slingshot Showdown 🐦</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: skyblue;
+      font-family: sans-serif;
+    }
+
+    #scoreboard {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 20px;
+      font-size: 20px;
+      border-radius: 10px;
+    }
+
+    #redoBtn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #ff5959;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="scoreboard">Score: 0</div>
+  <button id="redoBtn">🔁 Redo</button>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const scoreboard = document.getElementById("scoreboard");
+    const redoBtn = document.getElementById("redoBtn");
+
+    const gravity = 0.4;
+    let isDragging = false;
+    let score = 0;
+
+    const slingshot = { x: 150, y: canvas.height - 300 };
+
+    let bird;
+    let blocks = [];
+
+    function resetGame() {
+      bird = {
+        x: slingshot.x,
+        y: slingshot.y,
+        radius: 20,
+        vx: 0,
+        vy: 0,
+        launched: false
+      };
+
+      blocks = [];
+      for (let i = 0; i < 10; i++) {
+        blocks.push({
+          x: canvas.width - 300 + (i % 4) * 60,
+          y: canvas.height - 60 - Math.floor(i / 4) * 60,
+          w: 50,
+          h: 50,
+          color: "brown",
+          hit: false
+        });
+      }
+
+      score = 0;
+      updateScore();
+      redoBtn.style.display = "none";
+    }
+
+    function updateScore() {
+      scoreboard.textContent = "Score: " + score;
+    }
+
+    function drawSlingshot() {
+      ctx.strokeStyle = "#654321";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(slingshot.x - 10, slingshot.y);
+      ctx.lineTo(slingshot.x + 10, slingshot.y - 60);
+      ctx.stroke();
+    }
+
+    function drawBird() {
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.strokeStyle = "black";
+      ctx.stroke();
+    }
+
+    function drawBlocks() {
+      blocks.forEach(b => {
+        if (!b.hit) {
+          ctx.fillStyle = b.color;
+          ctx.fillRect(b.x, b.y, b.w, b.h);
+          ctx.strokeRect(b.x, b.y, b.w, b.h);
+        }
+      });
+    }
+
+    function update() {
+      if (bird.launched) {
+        bird.vy += gravity;
+        bird.x += bird.vx;
+        bird.y += bird.vy;
+
+        blocks.forEach(b => {
+          if (!b.hit && bird.x + bird.radius > b.x && bird.x - bird.radius < b.x + b.w &&
+              bird.y + bird.radius > b.y && bird.y - bird.radius < b.y + b.h) {
+            b.hit = true;
+            score++;
+            updateScore();
+          }
+        });
+
+        if (bird.y > canvas.height + 50 || bird.x > canvas.width + 50 || bird.x < -50) {
+          redoBtn.style.display = "inline-block";
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Sky and ground
+      ctx.fillStyle = "green";
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+      drawSlingshot();
+      drawBlocks();
+      drawBird();
+
+      if (isDragging) {
+        ctx.beginPath();
+        ctx.moveTo(slingshot.x, slingshot.y);
+        ctx.lineTo(bird.x, bird.y);
+        ctx.strokeStyle = "black";
+        ctx.stroke();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener("mousedown", e => {
+      const dx = e.offsetX - bird.x;
+      const dy = e.offsetY - bird.y;
+      if (Math.sqrt(dx * dx + dy * dy) < bird.radius + 10 && !bird.launched) {
+        isDragging = true;
+      }
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (isDragging) {
+        bird.x = e.offsetX;
+        bird.y = e.offsetY;
+      }
+    });
+
+    canvas.addEventListener("mouseup", e => {
+      if (isDragging) {
+        isDragging = false;
+        bird.vx = (slingshot.x - e.offsetX) * 0.15;
+        bird.vy = (slingshot.y - e.offsetY) * 0.15;
+        bird.launched = true;
+      }
+    });
+
+    redoBtn.addEventListener("click", () => {
+      resetGame();
+    });
+
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>
